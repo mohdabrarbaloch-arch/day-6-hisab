@@ -104,7 +104,15 @@ def create_invoice(db: Session, owner: User, data: InvoiceCreate) -> Invoice:
 
 def get_income_summary(db: Session, owner: User) -> IncomeSummary:
     invoices = db.scalars(select(Invoice).where(Invoice.owner_id == owner.id)).all()
-    rows = [(inv, compute_totals(inv.items)[2]) for inv in invoices]
+    rate = settings.default_usd_to_pkr
+
+    def in_usd(invoice: Invoice, total: float) -> float:
+        """Normalize non-USD invoices to USD at the configured PKR rate."""
+        if invoice.currency == "PKR":
+            return round(total / rate, 2)
+        return total
+
+    rows = [(inv, in_usd(inv, compute_totals(inv.items)[2])) for inv in invoices]
 
     def money(statuses: set[str]) -> float:
         return round(sum(t for inv, t in rows if inv.status in statuses), 2)

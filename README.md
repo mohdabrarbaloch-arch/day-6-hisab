@@ -9,6 +9,22 @@ project every single day.
 
 ---
 
+## 📸 Screenshots
+
+| Landing | Dashboard | Invoices |
+|---|---|---|
+| ![Landing](screenshots/landing.png) | ![Dashboard](screenshots/dashboard.png) | ![Invoices](screenshots/invoices.png) |
+
+*Multi-currency income: PKR invoices are normalized to USD at the configured rate (280/USD),
+and the outstanding figure is shown in rupees for tax-season planning.*
+
+## 🚀 Live demo
+
+**Not deployed** — this sandbox has no Vercel CLI or token, so there's no live URL yet. The
+app is fully runnable locally in two commands (see [Quick start](#-quick-start-local)), and the
+repo ships `vercel.json` + `api/index.py` so deployment is a single `vercel --prod` away once
+a token is available.
+
 ## ✨ Features
 
 - 🧾 **Invoices** — create with line items, currency (USD/PKR/EUR/GBP/AED/SAR), due dates and

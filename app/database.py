@@ -30,6 +30,19 @@ class Base(DeclarativeBase):
     pass
 
 
+def init_db() -> None:
+    """Create any missing tables.
+
+    Idempotent by design (``create_all`` skips tables that already exist), so
+    it is safe to call from both module-import time and the lifespan handler.
+    This matters on Vercel: the serverless Python runtime imports the module and
+    serves the request directly, and does NOT reliably run FastAPI's lifespan
+    startup -- so if we only create tables in ``lifespan``, every request on a
+    cold start hits ``no such table``. Import-time ``init_db`` closes that gap.
+    """
+    Base.metadata.create_all(bind=engine)
+
+
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:

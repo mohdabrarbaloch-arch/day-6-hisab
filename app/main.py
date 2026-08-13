@@ -12,7 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import settings
-from app.database import Base, engine
+from app.database import init_db
 from app.deps import limiter
 from app.routers import auth, clients, invoices, stats
 
@@ -27,8 +27,10 @@ STATIC_DIR = BASE_DIR / "static"
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # create_all is idempotent, so this is safe across cold starts and
-    # concurrent serverless instances (and more reliable than on_event there).
-    Base.metadata.create_all(bind=engine)
+    # concurrent serverless instances. We also call init_db() at import time in
+    # app.database because Vercel's Python runtime does not reliably run the
+    # lifespan handler — this here is the belt-and-suspenders path.
+    init_db()
     yield
 
 
@@ -78,3 +80,10 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+# Guarantee tables exist at import time. Vercel's serverless Python runtime
+# imports this module and serves requests WITHOUT running the lifespan handler,
+# so create_all must happen here (after every router/model is imported above)
+# or the first request on a cold start fails with "no such table: users".
+init_db()

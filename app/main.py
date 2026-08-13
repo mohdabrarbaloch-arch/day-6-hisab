@@ -1,5 +1,8 @@
 """Hisab app assembly: FastAPI + CORS + rate limiting + static SPA."""
 
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -13,8 +16,28 @@ from app.database import Base, engine
 from app.deps import limiter
 from app.routers import auth, clients, invoices, stats
 
+# Resolve the static dir from this file's own location instead of the process
+# working directory. Vercel's serverless Python runtime runs from a different
+# CWD, so a relative path like "app/static" silently resolves to nothing there
+# and the SPA comes back blank. Anchoring to __file__ makes it work everywhere.
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # create_all is idempotent, so this is safe across cold starts and
+    # concurrent serverless instances (and more reliable than on_event there).
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
 app = FastAPI(
-    title=settings.app_name, version="1.0.0", docs_url="/api/docs", openapi_url="/api/openapi.json"
+    title=settings.app_name,
+    version="1.0.0",
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
+    lifespan=lifespan,
 )
 
 app.state.limiter = limiter
@@ -38,11 +61,6 @@ async def security_headers(request: Request, call_next):
     return response
 
 
-@app.on_event("startup")
-def on_startup() -> None:
-    Base.metadata.create_all(bind=engine)
-
-
 @app.get("/api/health")
 def health() -> dict:
     return {"status": "ok", "app": settings.app_name, "version": "1.0.0"}
@@ -53,10 +71,10 @@ app.include_router(clients.router)
 app.include_router(invoices.router)
 app.include_router(stats.router)
 
-# Static SPA — served last so /api/* routes win.
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+# Static SPA — mounted last so /api/* routes always win.
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
-    return FileResponse("app/static/index.html")
+    return FileResponse(STATIC_DIR / "index.html")

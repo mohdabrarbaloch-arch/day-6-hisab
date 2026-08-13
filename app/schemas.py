@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -40,9 +41,9 @@ class Token(BaseModel):
 
 class ClientCreate(BaseModel):
     name: str = Field(min_length=2, max_length=160)
-    company: str | None = Field(default=None, max_length=160)
-    email: EmailStr | None = None
-    country: str | None = Field(default=None, max_length=80)
+    company: Optional[str] = Field(default=None, max_length=160)
+    email: Optional[EmailStr] = None
+    country: Optional[str] = Field(default=None, max_length=80)
 
 
 class ClientOut(ClientCreate):
@@ -63,7 +64,7 @@ class InvoiceCreate(BaseModel):
     client_id: int
     currency: str = Field(default="USD", min_length=3, max_length=3)
     due_date: datetime
-    notes: str | None = Field(default=None, max_length=2000)
+    notes: Optional[str] = Field(default=None, max_length=2000)
     items: list[InvoiceItemIn] = Field(min_length=1, max_length=50)
 
     @field_validator("currency")
@@ -90,7 +91,7 @@ class InvoiceOut(BaseModel):
     issue_date: datetime
     due_date: datetime
     status: str
-    notes: str | None
+    notes: Optional[str]
     client: ClientOut
     items: list[InvoiceItemOut]
     subtotal: float

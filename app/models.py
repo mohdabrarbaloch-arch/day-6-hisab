@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy import (
     Boolean,
@@ -16,6 +17,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+UTC = timezone.utc
 
 
 def utcnow() -> datetime:
@@ -46,9 +49,9 @@ class Client(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
-    company: Mapped[str | None] = mapped_column(String(160), nullable=True)
-    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    country: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    company: Mapped[Optional[str]] = mapped_column(String(160), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    country: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     owner: Mapped[User] = relationship(back_populates="clients")
@@ -68,7 +71,7 @@ class Invoice(Base):
     issue_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="draft", nullable=False)
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     owner: Mapped[User] = relationship(back_populates="invoices")

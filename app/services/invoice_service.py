@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models import Client, Invoice, InvoiceItem, User
 from app.schemas import IncomeSummary, InvoiceCreate
+
+UTC = timezone.utc
 
 
 class InvoiceError(ValueError):

@@ -6,11 +6,18 @@ requires-python = ">=3.11"
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+# Keep the codebase runnable on Python 3.9 (Vercel's legacy @vercel/python
+# runtime). This prevents ruff's UP007/UP017 rules from "upgrading" annotations
+# to `X | Y` (3.10+) and `datetime.UTC` (3.11+), which would crash on 3.9.
+target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]
-ignore = ["B008"]
+# UP007 (`Optional[X]` -> `X | Y`) and UP017 (`timezone.utc` -> `datetime.UTC`)
+# are disabled on purpose: this project stays runnable on Python 3.9, and both
+# "upgrades" would silently reintroduce 3.10+/3.11+ syntax that crashes Vercel's
+# legacy Python runtime.
+ignore = ["B008", "UP007", "UP017"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

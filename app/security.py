@@ -1,11 +1,14 @@
 """Password hashing (bcrypt) + JWT creation/verification."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import jwt
 from passlib.context import CryptContext
 
 from app.config import settings
+
+UTC = timezone.utc
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -24,7 +27,7 @@ def create_access_token(user_id: int) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
 
 
-def decode_access_token(token: str) -> int | None:
+def decode_access_token(token: str) -> Optional[int]:
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
         return int(payload["sub"])

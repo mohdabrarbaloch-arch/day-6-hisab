@@ -1,5 +1,7 @@
 """Invoice endpoints: CRUD + status transitions + list/summary."""
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -48,7 +50,7 @@ def _to_out(invoice: Invoice) -> InvoiceOut:
 def list_invoices(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    status_filter: str | None = Query(default=None, alias="status"),
+    status_filter: Optional[str] = Query(default=None, alias="status"),
 ):
     apply_status_refresh(db, current_user.id)
     stmt = select(Invoice).where(Invoice.owner_id == current_user.id)

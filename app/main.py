@@ -1,11 +1,12 @@
 """Hisab app assembly: FastAPI + CORS + rate limiting + static SPA."""
 
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -73,13 +74,35 @@ app.include_router(clients.router)
 app.include_router(invoices.router)
 app.include_router(stats.router)
 
-# Static SPA — mounted last so /api/* routes always win.
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+# --- Static assets -----------------------------------------------------------
+# Vercel builds `app/static/**` as a SEPARATE static build, so those files are
+# NOT inside the Python function bundle. Mounting a directory that does not
+# exist raises at import time, which surfaces as FUNCTION_INVOCATION_FAILED on
+# every /api/* route while `/` keeps serving the static build — the confusing
+# "site looks fine but the API is dead" failure. Guard it instead: when the
+# directory is missing we simply skip the mount and let the static build (or a
+# local dev server) serve the UI.
+_is_vercel = bool(os.environ.get("VERCEL"))
+if STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+    @app.get("/", include_in_schema=False)
+    def index() -> FileResponse:
+        return FileResponse(STATIC_DIR / "index.html")
+else:
 
-@app.get("/", include_in_schema=False)
-def index() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+    @app.get("/", include_in_schema=False)
+    def index_missing_static() -> JSONResponse:
+        # No SPA bundle in this deployment. Point at the API instead of 500ing.
+        return JSONResponse(
+            {
+                "status": "ok",
+                "app": settings.app_name,
+                "ui": "not-bundled",
+                "hint": "The SPA is served by the static build; use /api/docs for the API.",
+                "docs": "/api/docs",
+            }
+        )
 
 
 # Guarantee tables exist at import time. Vercel's serverless Python runtime
